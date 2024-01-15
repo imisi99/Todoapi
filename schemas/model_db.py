@@ -1,5 +1,5 @@
 from .database import data
-from sqlalchemy import Column, Integer, ForeignKey, Boolean, String, Float
+from sqlalchemy import Column, Integer, ForeignKey, Boolean, String, DateTime
 
 class User(data):
 
@@ -21,4 +21,5 @@ class Todo(data):
     task = Column(String, nullable= False)
     completed = Column(Boolean, nullable= False)
     note = Column(String(50), nullable= True)
+    due = Column(DateTime, nullable= False)
     user_id = Column(Integer, ForeignKey("User.id"))
