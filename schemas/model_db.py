@@ -6,8 +6,8 @@ class User(data):
     __tablename__ = "User"
 
     id = Column(Integer, primary_key= True, index= True)
-    first_name = Column(String, nullable= False)
-    last_name = Column(String, nullable= False)
+    firstname = Column(String, nullable= False)
+    lastname = Column(String, nullable= False)
     username = Column(String(50), unique= True, nullable= False)
     email = Column(String, nullable= False)
     password = Column(String, nullable=False)

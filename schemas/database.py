@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm import declarative_base
 
-database = 'sqlite:///todoapi.sqlite'
+database = 'postgresgl://postgres:Imisioluwa234.@localhost:5432/Todoapi'
 engine = create_engine(database, connect_args={"check_same_thread" : False})
 begin = sessionmaker(bind = engine, autocommit = False, autoflush = False)
 data = declarative_base()
