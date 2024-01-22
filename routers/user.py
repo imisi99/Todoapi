@@ -29,8 +29,27 @@ class UserForm(BaseModel):
     email : Annotated[EmailStr, Field]
     password : Annotated[str, Field(min_length= 8 , description= "Password must conatain at least 8 character, one special character, and one Upper case letter")]
 
+
     @validator("password")
     def check_password(cls, value):
         if len(value) < 8:
-            raise ValueError("Password must be at least 8 characters long")
-        
+            raise ValueError("Password must be at least 8 characters long!.")
+        if not any(char.isupper() for char in value):
+            raise ValueError("Password must contain at least one uppercase letter!.")
+        if not re.search(r'[!@#$%^&*(),.?:{}|<>]',value):
+            raise ValueError("Password must contain at least one special character!.")
+
+
+    class Config():
+        json_schema_extra = {
+            'example' : {
+                "firstname" : "firstname",
+                "lastname" : "lastname",
+                "username" : "username",
+                "gmail" : "email@gmail.com",
+                "password" : "passweord"
+            }
+        }
+
+
+# User Authorization and Authentication 
