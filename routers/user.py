@@ -10,7 +10,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import re
 from datetime import timedelta, datetime
-
+from passlib.context import CryptContext
 
 user = APIRouter()
 #Initializing the DB
@@ -127,6 +127,9 @@ class ChangePassword(BaseModel):
         }
 
 #User Authorization and Authentication 
+        
+hash = CryptContext(schemes= ["bcrypt"])
+
 #User Singup route
 #User login route
 #User get details route
