@@ -95,6 +95,7 @@ class NewPassword(BaseModel):
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]', value):
             raise ValueError("Password must contain at least one special character!.")
         
+        
     class Config():
         json_schema_extra = {
             'example' : {
