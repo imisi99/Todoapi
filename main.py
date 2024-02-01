@@ -11,4 +11,4 @@ app.get("/")
 async def landing_page():
     return "Create your To Do tasks with us today, click here to login/signup"
 
-
+model_db.data.metadata.create_all(bind = engine)

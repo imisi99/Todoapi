@@ -9,7 +9,7 @@ class User(data):
     firstname = Column(String, nullable= False)
     lastname = Column(String, nullable= False)
     username = Column(String(50), unique= True, nullable= False)
-    email = Column(String, nullable= False)
+    email = Column(String, nullable= False, unique = True, nullable = False)
     password = Column(String, nullable=False)
 
 

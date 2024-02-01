@@ -15,12 +15,48 @@ from passlib.context import CryptContext
 user = APIRouter()
 #Initializing the DB
 model_db.data.metadata.create_all(bind = engine)
+
+#User Authorization and Authentication 
+hash = CryptContext(schemes= ["bcrypt"])
 db_dependency = Annotated[str, Depends(get_db)]
 
 
-user_dependancy = Annotated[str, Depends()]
+def authorization(username : str , password: str , db):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return False
+    password = hash.hash(password, user.password)
+    if not password:
+        return False
+    return user
 
+SECRECT = '488134d4d7e4205c8960dcb67c689fceba88ef1476126a7f9d78093bbb64150fd7f2652b081826475b73a76b73829e821f72cfd313a363f6e1db3927caaf46ba88c0c12d66e9cb0e2104262f29bdba91359d181497790424c298c26c2f4776187b5cb8d9f6afd3bc975cb207af2b057c6561cea6ff686b2bdc8fb5ad0244838c'
+Algorithm = 'HS256'
 
+def access(username : str, user_id : int, timedelta):
+    encode = {'sub' : username , 'id' : user_id}
+    expired = datetime.utcnow() + timedelta
+    encode.update({'exp' : expired})
+    return jwt.encode(encode, SECRECT, algorithm= Algorithm)
+
+bearer = OAuth2PasswordBearer(tokenUrl="user/login")
+
+def get_user(token : Annotated[str, Depends(bearer)]):
+    try:
+        payload = jwt.decode(token, SECRECT, algorithms= Algorithm)
+        username : str = payload.get("sub")
+        user_id : int = payload.get("id")
+        if username is None or user_id is None:
+            raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password!")
+        
+        return {
+            "username" : username,
+            "user_id" : user_id
+        }
+    except JWTError:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password!")
+        
+user_dependancy = Annotated[str, Depends(get_user)]
 #Creating the pydantic validattion for the user signup form 
 class UserForm(BaseModel):
     firstname : Annotated[str, Field(min_length= 3, max_length= 50)]
@@ -127,9 +163,8 @@ class ChangePassword(BaseModel):
             }
         }
 
-#User Authorization and Authentication 
         
-hash = CryptContext(schemes= ["bcrypt"])
+
 
 #User Singup route
 #User login route

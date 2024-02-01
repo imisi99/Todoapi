@@ -22,6 +22,7 @@ def get_db():
     finally:
         db.close()
 
+#Authentication and Authorization
 db_dependency = Annotated[str, Depends(get_db)]
 user_dependancy = Annotated[str, Depends(get_user)]
 
