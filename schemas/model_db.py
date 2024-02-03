@@ -9,7 +9,7 @@ class User(data):
     firstname = Column(String, nullable= False)
     lastname = Column(String, nullable= False)
     username = Column(String(50), unique= True, nullable= False)
-    email = Column(String, nullable= False, unique = True, nullable = False)
+    email = Column(String, unique = True, nullable = False)
     password = Column(String, nullable=False)
 
 
@@ -22,4 +22,4 @@ class Todo(data):
     completed = Column(Boolean, nullable= False)
     note = Column(String(50), nullable= True)
     due = Column(DateTime, nullable= False)
-    user_id = Column(Integer, ForeignKey("User.id"))
+    user_id = Column(Integer, ForeignKey("User.id")) 

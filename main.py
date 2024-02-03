@@ -4,10 +4,11 @@ from routers.user import user
 from schemas.database import engine, begin
 import schemas.model_db as model_db
 app = FastAPI()
-app.include_router(todo, prefix= "/todo", tags= ["Todo"])
 app.include_router(user, prefix= "/user", tags= ["User"])
+app.include_router(todo, prefix= "/todo", tags= ["Todo"])
 
-app.get("/")
+
+@app.get("/")
 async def landing_page():
     return "Create your To Do tasks with us today, click here to login/signup"
 

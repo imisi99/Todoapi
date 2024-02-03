@@ -5,7 +5,6 @@ from starlette import status
 from schemas.database import engine, begin
 import schemas.model_db as model_db
 from schemas.model_db import User
-from .todo import get_db
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import re
@@ -13,19 +12,28 @@ from datetime import timedelta, datetime
 from passlib.context import CryptContext
 
 user = APIRouter()
+
 #Initializing the DB
 model_db.data.metadata.create_all(bind = engine)
 
-#User Authorization and Authentication 
-hash = CryptContext(schemes= ["bcrypt"])
+def get_db():
+    db =begin()
+    try:
+        yield db
+    finally:
+        db.close()
+    
 db_dependency = Annotated[str, Depends(get_db)]
 
+#User Authorization and Authentication 
+
+hash = CryptContext(schemes= ["bcrypt"])
 
 def authorization(username : str , password: str , db):
     user = db.query(User).filter(User.username == username).first()
     if not user:
         return False
-    password = hash.hash(password, user.password)
+    password = hash.verify(password, user.password)
     if not password:
         return False
     return user
@@ -33,30 +41,31 @@ def authorization(username : str , password: str , db):
 SECRECT = '488134d4d7e4205c8960dcb67c689fceba88ef1476126a7f9d78093bbb64150fd7f2652b081826475b73a76b73829e821f72cfd313a363f6e1db3927caaf46ba88c0c12d66e9cb0e2104262f29bdba91359d181497790424c298c26c2f4776187b5cb8d9f6afd3bc975cb207af2b057c6561cea6ff686b2bdc8fb5ad0244838c'
 Algorithm = 'HS256'
 
-def access(username : str, user_id : int, timedelta):
+def authentication(username : str, user_id : int, timedelta):
     encode = {'sub' : username , 'id' : user_id}
     expired = datetime.utcnow() + timedelta
     encode.update({'exp' : expired})
     return jwt.encode(encode, SECRECT, algorithm= Algorithm)
 
 bearer = OAuth2PasswordBearer(tokenUrl="user/login")
-
-def get_user(token : Annotated[str, Depends(bearer)]):
+async def get_user(token : Annotated[str, Depends(bearer)]):
     try:
-        payload = jwt.decode(token, SECRECT, algorithms= Algorithm)
+        payload = jwt.decode(token, SECRECT, algorithms= [Algorithm])
         username : str = payload.get("sub")
         user_id : int = payload.get("id")
         if username is None or user_id is None:
-            raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password!")
-        
+            raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
         return {
             "username" : username,
             "user_id" : user_id
         }
-    except JWTError:
-        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password!")
+    
+    except JWTError as e:
+        print(f"JWTError occurred: {e}")
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Error while decoding token please try again later")
         
 user_dependancy = Annotated[str, Depends(get_user)]
+    
 #Creating the pydantic validattion for the user signup form 
 class UserForm(BaseModel):
     firstname : Annotated[str, Field(min_length= 3, max_length= 50)]
@@ -74,7 +83,7 @@ class UserForm(BaseModel):
             raise ValueError("Password must contain at least one uppercase letter!.")
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]',value):
             raise ValueError("Password must contain at least one special character!.")
-
+        return value
 
     class Config():
         json_schema_extra = {
@@ -82,7 +91,7 @@ class UserForm(BaseModel):
                 "firstname" : "Firstname",
                 "lastname" : "Lastname",
                 "username" : "Username",
-                "gmail" : "email@gmail.com",
+                "email" : "email@gmail.com",
                 "password" : "Password"
             }
         }
@@ -119,6 +128,7 @@ class UpdateUser(BaseModel):
 
 #Change password class
 class NewPassword(BaseModel):
+    password : Annotated[str, Field()]
     new_password : Annotated[str, Field(min_length= 8, description= "Password must conatain at least 8 character, one special character, and one Upper case letter")]
     confirm_password : Annotated[str, Field()]
 
@@ -130,15 +140,17 @@ class NewPassword(BaseModel):
             raise ValueError("Password must contain at leat one upper-case character!.")
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]', value):
             raise ValueError("Password must contain at least one special character!.")
-        
+        return value
         
     class Config():
         json_schema_extra = {
             'example' : {
+                "password" : "password",
                 "new_password" : "new_password",
                 "confirm_password" : "confirm_password"
             }
         }
+
 #Forgotten user password 
 class ChangePassword(BaseModel):
     username : Annotated[str, Field(min_length= 3, max_length= 15)]
@@ -153,7 +165,8 @@ class ChangePassword(BaseModel):
             raise ValueError("Password must contain at least one upper-case character!.")
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]'):
             raise ValueError("Password must contain at least one special character!.")
-        
+        return value
+    
     class Config():
         json_schema_extra = {
             'example' : {
@@ -163,13 +176,88 @@ class ChangePassword(BaseModel):
             }
         }
 
-        
+#Login Token class
+class Token(BaseModel):
+    access_token : str
+    token_type : str
 
+
+#Logged in user class
+class UserDetails(BaseModel):
+    firstname : str
+    lastname : str
+    email : EmailStr
+    username : str
 
 #User Singup route
+@user.post("/signup", status_code= status.HTTP_201_CREATED)
+async def user_signup(userform : UserForm, db : db_dependency):
+    signup = False
+    existing_username = db.query(User).filter(User.username == userform.username).first()
+    existing_email = db.query(User).filter(User.email == userform.email).first()
+    if existing_username:
+        raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "username is already in use!")
+    
+    if existing_email:
+        raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "email is already in use!")
+    user = User(
+        firstname = userform.firstname,
+        lastname = userform.lastname,
+        username = userform.username,
+        email = userform.email,
+        password = hash.hash(userform.password)
+
+    )
+    signup = True
+
+    if signup is not True:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error in trying to validate user")
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+   
+
 #User login route
-#User get details route
+@user.post("/login", response_model= Token, status_code= status.HTTP_200_OK)
+async def user_login(login : Annotated[OAuth2PasswordRequestForm, Depends()], db : db_dependency):
+    user = authorization(login.username, login.password, db)
+    if not user:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password")
+    
+    token = authentication(user.username, user.id, timedelta(minutes= 200))
+
+    if not token:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error trying to log you in please try again later")
+    return {
+        "access_token" : token,
+        "token_type" : "bearer"
+    }
+    
+
+#Get logged in user details route
+@user.get("/get-user-details", status_code= status.HTTP_200_OK)
+async def get_current_user_details(user : user_dependancy, db : db_dependency):
+    if not user:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
+    user_data = db.query(User).filter(User.id == user.get("user_id")).first()
+
+    if user_data is not None:
+        data = UserDetails(
+            firstname = user_data.firstname,
+            lastname = user_data.lastname,
+            email = user_data.email,
+            username = user_data.username,
+        )
+
+        return data
+    
+    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail= "Error in getting user details, please try again later")
+
+
 #User update details route 
+@user.put
 #User change password route 
 #User forgot password route 
 #User delete route
