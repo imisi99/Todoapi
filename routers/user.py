@@ -271,16 +271,18 @@ async def update_user_details(user : user_dependancy, form : UpdateUser, db : db
     if not user:
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
     
+    user1 = db.query(User).filter(User.id == user.get("user_id")).first()
+
     existing_email = db.query(User).filter(User.email == form.email).first()
     existing_username = db.query(User).filter(User.username == form.username).first()
 
-    if existing_email is not None:
+    if existing_email is not None and existing_email.email != user1.email:
         raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "email is already in use")
     
-    if existing_username is not None:
+    if existing_username is not None and existing_username.username != user1.username:
         raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "username is already in use")
     
-    user1 = db.query(User).filter(User.id == user.get("user_id")).first()
+    
 
     if user1 is None:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Invalid login credentials")
