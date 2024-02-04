@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Annotated, Optional
 from .user import get_user
 from datetime import datetime
-
+from sqlalchemy.orm import Session
 
 todo = APIRouter()
 
@@ -23,7 +23,7 @@ def get_db():
         db.close()
 
 #Authentication and Authorization
-db_dependency = Annotated[str, Depends(get_db)]
+db_dependency = Annotated[Session, Depends(get_db)]
 user_dependancy = Annotated[str, Depends(get_user)]
 
 #Todo create class

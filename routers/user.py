@@ -4,12 +4,13 @@ from pydantic import BaseModel, Field, EmailStr, validator
 from starlette import status
 from schemas.database import engine, begin
 import schemas.model_db as model_db
-from schemas.model_db import User
+from schemas.model_db import Todo, User
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import re
 from datetime import timedelta, datetime
 from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 user = APIRouter()
 
@@ -23,7 +24,7 @@ def get_db():
     finally:
         db.close()
     
-db_dependency = Annotated[str, Depends(get_db)]
+db_dependency = Annotated[Session, Depends(get_db)]
 
 #User Authorization and Authentication 
 
@@ -153,6 +154,7 @@ class NewPassword(BaseModel):
 
 #Forgotten user password 
 class ChangePassword(BaseModel):
+    email : Annotated[EmailStr, Field()]
     username : Annotated[str, Field(min_length= 3, max_length= 15)]
     new_password : Annotated[str, Field(min_length= 8, description= "Password must conatain at least 8 character, one special character, and one Upper case letter")]
     confirm_password : Annotated[str, Field]
@@ -163,16 +165,17 @@ class ChangePassword(BaseModel):
             raise ValueError("Password must be at least 8 characters long!.")
         if not any(char.isupper() for char in value):
             raise ValueError("Password must contain at least one upper-case character!.")
-        if not re.search(r'[!@#$%^&*(),.?:{}|<>]'):
+        if not re.search(r'[!@#$%^&*(),.?:{}|<>]', value):
             raise ValueError("Password must contain at least one special character!.")
         return value
     
     class Config():
         json_schema_extra = {
             'example' : {
+                "email" : "email@email.com",
                 "username" : "Username",
-                "password" : "Password",
-                "confirm password" : " re-type Password"
+                "new_password" : "Password",
+                "confirm_password" : "confirm password"
             }
         }
 
@@ -189,6 +192,7 @@ class UserDetails(BaseModel):
     email : EmailStr
     username : str
 
+
 #User Singup route
 @user.post("/signup", status_code= status.HTTP_201_CREATED)
 async def user_signup(userform : UserForm, db : db_dependency):
@@ -200,6 +204,7 @@ async def user_signup(userform : UserForm, db : db_dependency):
     
     if existing_email:
         raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "email is already in use!")
+    
     user = User(
         firstname = userform.firstname,
         lastname = userform.lastname,
@@ -217,10 +222,11 @@ async def user_signup(userform : UserForm, db : db_dependency):
     db.commit()
     db.refresh(user)
 
-   
+    return "User has been created successfully"
+
 
 #User login route
-@user.post("/login", response_model= Token, status_code= status.HTTP_200_OK)
+@user.post("/login", response_model= Token, status_code= status.HTTP_202_ACCEPTED)
 async def user_login(login : Annotated[OAuth2PasswordRequestForm, Depends()], db : db_dependency):
     user = authorization(login.username, login.password, db)
     if not user:
@@ -230,6 +236,7 @@ async def user_login(login : Annotated[OAuth2PasswordRequestForm, Depends()], db
 
     if not token:
         raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error trying to log you in please try again later")
+    
     return {
         "access_token" : token,
         "token_type" : "bearer"
@@ -241,6 +248,7 @@ async def user_login(login : Annotated[OAuth2PasswordRequestForm, Depends()], db
 async def get_current_user_details(user : user_dependancy, db : db_dependency):
     if not user:
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
+    
     user_data = db.query(User).filter(User.id == user.get("user_id")).first()
 
     if user_data is not None:
@@ -257,7 +265,126 @@ async def get_current_user_details(user : user_dependancy, db : db_dependency):
 
 
 #User update details route 
-@user.put
+@user.put("/update-user-details", status_code= status.HTTP_202_ACCEPTED)
+async def update_user_details(user : user_dependancy, form : UpdateUser, db : db_dependency):
+    user_update = False
+    if not user:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
+    
+    existing_email = db.query(User).filter(User.email == form.email).first()
+    existing_username = db.query(User).filter(User.username == form.username).first()
+
+    if existing_email is not None:
+        raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "email is already in use")
+    
+    if existing_username is not None:
+        raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "username is already in use")
+    
+    user1 = db.query(User).filter(User.id == user.get("user_id")).first()
+
+    if user1 is None:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Invalid login credentials")
+    
+    user1.firstname = form.firstname
+    user1.lastname = form.lastname
+    user1.email = form.email
+    user1.username = form.username
+
+    user_update = True
+
+    if user_update is not True:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "An error occured while trying to update user, please try again later")
+    
+
+    db.add(user1)
+    db.commit()
+    db.refresh(user1)
+
+    return "User details have been Updated successfully"
+
+
 #User change password route 
+@user.put("/change-user-password", status_code= status.HTTP_202_ACCEPTED)
+async def change_user_password(user : user_dependancy, form : NewPassword , db : db_dependency):
+    password_changed = False
+    if not user:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
+    
+    user1 = db.query(User).filter(User.id == user.get("user_id")).first()
+
+    if not user1:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Invalid login credentials")
+    
+    password = hash.verify(form.password, user1.password)
+    if not password:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid Password! ")
+    
+    if form.new_password != form.confirm_password:
+        raise HTTPException(status_code= status.HTTP_422_UNPROCESSABLE_ENTITY, detail= "Password does not match")
+    
+    user1.password = hash.hash(form.new_password)
+    
+    password_changed = True
+
+    if password_changed is not True:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error while trying to process new password, please try again later")
+    
+
+    db.add(user1)
+    db.commit()
+    db.refresh(user1)
+
+    return "Password has been Updated Successfully"
+
+
 #User forgot password route 
+@user.put("/forgot-password", status_code= status.HTTP_202_ACCEPTED)
+async def user_forgot_password(db : db_dependency, form : ChangePassword):
+    password_changed = False
+    user = db.query(User).filter(User.username == form.username).filter(User.email == form.email).first()
+
+    if not user:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Invalid user credentials!")
+    
+    if form.new_password != form.confirm_password:
+        raise HTTPException(status_code= status.HTTP_422_UNPROCESSABLE_ENTITY, detail= "Password does not match")
+    
+    user.password = hash.hash(form.new_password)
+    
+    password_changed = True
+
+    if password_changed is not True:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error while trying to process new password, please try again later")
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return "Password has been changed successfully"
+
+
 #User delete route
+@user.delete("/delete-user")
+async def delete_user(user : user_dependancy, db : db_dependency):
+    user_deleted = False
+    if not user:
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
+    
+    delete = db.query(User).filter(User.id == user.get("user_id")).first()
+    todo = db.query(Todo).filter(Todo.user_id == user.get("user_id")).delete()
+
+    if not delete:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error while deleting user data")
+    
+    if not todo:
+       pass
+    
+    user_deleted = True
+
+    if user_deleted is not True:
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error while deleting user, please try again later")
+    
+    db.delete(delete)
+    db.commit()
+
+    return "User has been deleted successfully"
