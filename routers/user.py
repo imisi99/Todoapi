@@ -63,7 +63,7 @@ async def get_user(token : Annotated[str, Depends(bearer)]):
     
     except JWTError as e:
         print(f"JWTError occurred: {e}")
-        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Error while decoding token please try again later")
+        raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "User timed out due to inactivity, Login to comtinue")
         
 user_dependancy = Annotated[str, Depends(get_user)]
     
@@ -172,7 +172,7 @@ class ChangePassword(BaseModel):
     class Config():
         json_schema_extra = {
             'example' : {
-                "email" : "email@email.com",
+                "email" : "email@gmail.com",
                 "username" : "Username",
                 "new_password" : "Password",
                 "confirm_password" : "confirm password"
@@ -232,7 +232,7 @@ async def user_login(login : Annotated[OAuth2PasswordRequestForm, Depends()], db
     if not user:
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Invalid username or password")
     
-    token = authentication(user.username, user.id, timedelta(minutes= 200))
+    token = authentication(user.username, user.id, timedelta(minutes= 15))
 
     if not token:
         raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, detail= "Error trying to log you in please try again later")
