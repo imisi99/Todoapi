@@ -85,6 +85,15 @@ class UserForm(BaseModel):
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]',value):
             raise ValueError("Password must contain at least one special character!.")
         return value
+    
+    @validator("username")
+    def check_username(cls, value):
+        if len(value) < 8 :
+            raise ValueError("Username must be at least 8 characters long")
+        if len(value) > 12 :
+            raise ValueError("Username is too long")
+        return value.replace(" ", "")
+    
 
     class Config():
         json_schema_extra = {
