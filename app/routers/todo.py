@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Path
-from schemas.database import begin, engine 
-from schemas.model_db import Todo
-import schemas.model_db as model_db
+from ..schemas.database import begin, engine 
+from ..schemas.model_db import Todo
+from ..schemas import model_db as model_db
 from starlette import status
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
@@ -174,8 +174,8 @@ async def update_todo(user : user_dependancy, db : db_dependency, form : UpdateT
     if todo_data is None:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "Todo not found")
     
-    todo_data.task = form.tasks,
-    todo_data.note = form.note,
+    todo_data.task = form.tasks
+    todo_data.note = form.note
     todo_data.due = form.due
         
     todo_updated = True

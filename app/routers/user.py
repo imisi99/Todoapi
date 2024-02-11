@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 from pydantic import BaseModel, Field, EmailStr, validator
 from starlette import status
-from schemas.database import engine, begin
-import schemas.model_db as model_db
-from schemas.model_db import Todo, User
+from ..schemas.database import engine, begin
+from ..schemas import model_db as model_db
+from ..schemas.model_db import Todo, User
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import jwt, JWTError
 import re

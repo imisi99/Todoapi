@@ -1,8 +1,10 @@
 from fastapi import FastAPI
-from routers.todo import todo
-from routers.user import user
-from schemas.database import engine, begin
-import schemas.model_db as model_db
+from .routers.todo import todo
+from .routers.user import user
+from .schemas.database import engine, begin
+from .schemas import model_db as model_db
+
+
 app = FastAPI()
 app.include_router(user, prefix= "/user", tags= ["User"])
 app.include_router(todo, prefix= "/todo", tags= ["Todo"])
