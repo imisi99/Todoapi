@@ -208,6 +208,8 @@ async def user_signup(userform : UserForm, db : db_dependency):
     signup = False
     existing_username = db.query(User).filter(User.username == userform.username).first()
     existing_email = db.query(User).filter(User.email == userform.email).first()
+    if existing_email and existing_username:
+        raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "username and email already in use!")
     if existing_username:
         raise HTTPException(status_code= status.HTTP_226_IM_USED, detail= "username is already in use!")
     

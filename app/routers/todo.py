@@ -210,19 +210,14 @@ async def delete_single_task(user : user_dependancy, db : db_dependency, todo_id
 #delete tasks route with completed todo
 @todo.delete("/delete/all/{completed_todo}", status_code= status.HTTP_204_NO_CONTENT, response_description= {204 : {"description" : "User has deleted all todo that has been completed "}})
 async def delete_all_completed_tasks(user : user_dependancy, db : db_dependency, completed_todo : bool = Path()):
-    delete_todos = False
     if not user:
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail= "Unauthorized user")
     
     data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.completed == completed_todo).all()
 
-    if data is None:
-        raise HTTPException(status_code= status.HTTP_422_UNPROCESSABLE_ENTITY, detail= "Invalid Credentials")
-    
-    db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.completed == completed_todo).delete()
-    delete_todos = True
-    if delete_todos is not True:
+    if not data:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, detail= "No Todo available")
     
-    
+    db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.completed == completed_todo).delete()
+
     db.commit()
