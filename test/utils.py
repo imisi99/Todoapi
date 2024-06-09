@@ -60,7 +60,7 @@ def test_user():
         lastname = "Isong",
         username = "Imisioluwa23",
         email = "isongrichard234@gmail.com",
-        password = hash.hash("Interstellar.")
+        password = hash.hashed("Interstellar.")
     )
 
     db =test_begin()
