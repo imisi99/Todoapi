@@ -6,18 +6,18 @@ from app.schemas.model_db import Todo, User
 import pytest
 from app.main import app
 from fastapi.testclient import TestClient
-from app.routers.user import hash
-
+from app.routers.user import hashed
 
 database = "sqlite:///testdb.sqlite"
 engine = create_engine(
-    database, 
-    connect_args= {"check_same_thread" : False},
-    poolclass= StaticPool
+    database,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool
 )
 
-test_begin =sessionmaker(bind= engine, autocommit = False, autoflush = False)
-data.metadata.create_all(bind= engine)
+test_begin = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+data.metadata.create_all(bind=engine)
+
 
 def overide_get_db():
     db = test_begin()
@@ -27,20 +27,23 @@ def overide_get_db():
     finally:
         db.close
 
+
 def overide_get_user():
-    return {"username" : "Imisioluwa23", "user_id" : 1} 
+    return {"username": "Imisioluwa23", "user_id": 1}
+
 
 client = TestClient(app)
+
 
 @pytest.fixture
 def test_todo():
     todo = Todo(
-        id =1,
-        task = "Trying to test out my todo test",
-        completed = False,
-        note = "This is kinda getting boring, Front-end sucks",
-        due = "Today",
-        user_id = 1,
+        id=1,
+        task="Trying to test out my todo test",
+        completed=False,
+        note="This is kinda getting boring, Front-end sucks",
+        due="Today",
+        user_id=1,
     )
 
     db = test_begin()
@@ -55,15 +58,15 @@ def test_todo():
 @pytest.fixture
 def test_user():
     user = User(
-        id = 1,
-        firstname = "Imisioluwa",
-        lastname = "Isong",
-        username = "Imisioluwa23",
-        email = "isongrichard234@gmail.com",
-        password = hash.hashed("Interstellar.")
+        id=1,
+        firstname="Imisioluwa",
+        lastname="Isong",
+        username="Imisioluwa23",
+        email="isongrichard234@gmail.com",
+        password=hashed.hash("Interstellar.")
     )
 
-    db =test_begin()
+    db = test_begin()
     db.add(user)
     db.commit()
     yield user
