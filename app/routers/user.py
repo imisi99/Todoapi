@@ -43,7 +43,10 @@ def authorization(username: str, password: str, db):
     return user
 
 
-SECRECT = '488134d4d7e4205c8960dcb67c689fceba88ef1476126a7f9d78093bbb64150fd7f2652b081826475b73a76b73829e821f72cfd313a363f6e1db3927caaf46ba88c0c12d66e9cb0e2104262f29bdba91359d181497790424c298c26c2f4776187b5cb8d9f6afd3bc975cb207af2b057c6561cea6ff686b2bdc8fb5ad0244838c'
+SECRET = ('488134d4d7e4205c8960dcb67c689fceba88ef1476126a7f9d78093bbb64150fd7f2652b081826475b73a76b73829e821f72cfd3'
+          '13a363f6e1db3927caaf46ba88c0c12d66e9cb0e2104262f29bdba91359d181497790424c298c26c2f4776187b5cb8d9f6afd3bc9'
+          '75cb207af2b057c6561cea6ff686b2bdc8fb5ad0244838c')
+
 Algorithm = 'HS256'
 
 
@@ -51,7 +54,7 @@ def authentication(username: str, user_id: int, timedelta):
     encode = {'sub': username, 'id': user_id}
     expired = datetime.utcnow() + timedelta
     encode.update({'exp': expired})
-    return jwt.encode(encode, SECRECT, algorithm=Algorithm)
+    return jwt.encode(encode, SECRET, algorithm=Algorithm)
 
 
 bearer = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -59,7 +62,7 @@ bearer = OAuth2PasswordBearer(tokenUrl="user/login")
 
 async def get_user(token: Annotated[str, Depends(bearer)]):
     try:
-        payload = jwt.decode(token, SECRECT, algorithms=[Algorithm])
+        payload = jwt.decode(token, SECRET, algorithms=[Algorithm])
         username: str = payload.get("sub")
         user_id: int = payload.get("id")
         if username is None or user_id is None:
@@ -72,10 +75,10 @@ async def get_user(token: Annotated[str, Depends(bearer)]):
     except JWTError as e:
         print(f"JWTError occurred: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="User timed out due to inactivity, Login to comtinue")
+                            detail="User timed out due to inactivity, Login to continue")
 
 
-user_dependancy = Annotated[str, Depends(get_user)]
+user_dependency = Annotated[str, Depends(get_user)]
 
 
 # Creating the pydantic validation for the user signup form
@@ -85,7 +88,8 @@ class UserForm(BaseModel):
     username: Annotated[str, Field(min_length=3, max_length=15)]
     email: Annotated[EmailStr, Field]
     password: Annotated[str, Field(min_length=8,
-                                   description="Password must conatain at least 8 character, one special character, and one Upper case letter")]
+                                   description="Password must contain at least 8 character, one special character"
+                                               ", and one Upper case letter")]
 
     @validator("password")
     def check_password(cls, value):
@@ -122,7 +126,7 @@ class LoginForm(BaseModel):
     username: Annotated[str, Field]
     password: Annotated[str, Field]
 
-    class Config():
+    class Config:
         json_schema_extra = {
             'example': {
                 "username": "Username",
@@ -138,7 +142,7 @@ class UpdateUser(BaseModel):
     username: Annotated[str, Field(min_length=3, max_length=15)]
     email: Annotated[EmailStr, Field]
 
-    class Config():
+    class Config:
         json_schema_extra = {
             'example': {
                 "firstname": "Firstname",
@@ -153,7 +157,8 @@ class UpdateUser(BaseModel):
 class NewPassword(BaseModel):
     password: Annotated[str, Field()]
     new_password: Annotated[str, Field(min_length=8,
-                                       description="Password must conatain at least 8 character, one special character, and one Upper case letter")]
+                                       description="Password must contain at least 8 character, one special"
+                                                   " character, and one Upper case letter")]
     confirm_password: Annotated[str, Field()]
 
     @validator("new_password")
@@ -161,12 +166,12 @@ class NewPassword(BaseModel):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters long!.")
         if not any(char.isupper() for char in value):
-            raise ValueError("Password must contain at leat one upper-case character!.")
+            raise ValueError("Password must contain at least one upper-case character!.")
         if not re.search(r'[!@#$%^&*(),.?:{}|<>]', value):
             raise ValueError("Password must contain at least one special character!.")
         return value
 
-    class Config():
+    class Config:
         json_schema_extra = {
             'example': {
                 "password": "password",
@@ -181,7 +186,8 @@ class ChangePassword(BaseModel):
     email: Annotated[EmailStr, Field()]
     username: Annotated[str, Field(min_length=3, max_length=15)]
     new_password: Annotated[str, Field(min_length=8,
-                                       description="Password must conatain at least 8 character, one special character, and one Upper case letter")]
+                                       description="Password must contain at least 8 character, one special character"
+                                                   " and one Upper case letter")]
     confirm_password: Annotated[str, Field]
 
     @validator("new_password")
@@ -194,7 +200,7 @@ class ChangePassword(BaseModel):
             raise ValueError("Password must contain at least one special character!.")
         return value
 
-    class Config():
+    class Config:
         json_schema_extra = {
             'example': {
                 "email": "email@gmail.com",
@@ -276,8 +282,8 @@ async def user_login(login: Annotated[OAuth2PasswordRequestForm, Depends()], db:
 
 # Get logged in user details route
 @user.get("/get-user-details", status_code=status.HTTP_200_OK,
-          response_description={200: {"description": "Logged in user has successfully recived details"}})
-async def get_current_user_details(user: user_dependancy, db: db_dependency):
+          response_description={200: {"description": "Logged in user has successfully received details"}})
+async def get_current_user_details(user: user_dependency, db: db_dependency):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
@@ -300,7 +306,7 @@ async def get_current_user_details(user: user_dependancy, db: db_dependency):
 # User update details route
 @user.put("/update-user-details", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User details have been updated successfully"}})
-async def update_user_details(user: user_dependancy, form: UpdateUser, db: db_dependency):
+async def update_user_details(user: user_dependency, form: UpdateUser, db: db_dependency):
     user_update = False
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
@@ -328,7 +334,7 @@ async def update_user_details(user: user_dependancy, form: UpdateUser, db: db_de
 
     if user_update is not True:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="An error occured while trying to update user, please try again later")
+                            detail="An error occurred while trying to update user, please try again later")
 
     db.add(user1)
     db.commit()
@@ -340,7 +346,7 @@ async def update_user_details(user: user_dependancy, form: UpdateUser, db: db_de
 # User change password route
 @user.put("/change-user-password", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User password has been changed successfully"}})
-async def change_user_password(user: user_dependancy, form: NewPassword, db: db_dependency):
+async def change_user_password(user: user_dependency, form: NewPassword, db: db_dependency):
     password_changed = False
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
@@ -407,7 +413,7 @@ async def user_forgot_password(db: db_dependency, form: ChangePassword):
 # User delete route
 @user.delete("/delete-user", status_code=status.HTTP_204_NO_CONTENT,
              response_description={204: {"description": "User details alongside todos has been deleted successfully"}})
-async def delete_user(user: user_dependancy, db: db_dependency):
+async def delete_user(user: user_dependency, db: db_dependency):
     user_deleted = False
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
