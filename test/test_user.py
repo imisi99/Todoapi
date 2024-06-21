@@ -1,5 +1,5 @@
 from .utils import *
-from app.routers.user import get_user, get_db, authorization, authentication, jwt, timedelta, SECRECT, Algorithm
+from app.routers.user import get_user, get_db, authorization, authentication, jwt, timedelta, SECRET, Algorithm
 from starlette import status
 
 app.dependency_overrides[get_db] = overide_get_db
@@ -100,7 +100,7 @@ def test_access():
 
     token = authentication(username, user_id, expired)
 
-    decode = jwt.decode(token, SECRECT, algorithms=Algorithm)
+    decode = jwt.decode(token, SECRET, algorithms=Algorithm)
 
     assert decode['sub'] == username
     assert decode['id'] == user_id
@@ -109,7 +109,7 @@ def test_access():
 @pytest.mark.asyncio
 async def test_get_user(test_user):
     encode = {'sub': 'Imisioluwa23', 'id': 1}
-    token = jwt.encode(encode, SECRECT, algorithm=Algorithm)
+    token = jwt.encode(encode, SECRET, algorithm=Algorithm)
 
     user = await get_user(token=token)
     assert user == {"username": "Imisioluwa23", "user_id": 1}

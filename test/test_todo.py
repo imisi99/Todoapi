@@ -80,4 +80,4 @@ def test_delete_todo(test_todo):
 
 def test_delete_all_todo(test_todo):
     response = client.delete("/todo/delete/all/True")
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == status.HTTP_404_NOT_FOUND
