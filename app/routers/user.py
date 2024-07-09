@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from starlette import status
 from ..schemas.database import engine, begin
 from ..schemas import model_db as model_db
@@ -91,7 +91,7 @@ class UserForm(BaseModel):
                                    description="Password must contain at least 8 character, one special character"
                                                ", and one Upper case letter")]
 
-    @validator("password")
+    @field_validator("password")
     def check_password(cls, value):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters long!.")
@@ -101,7 +101,7 @@ class UserForm(BaseModel):
             raise ValueError("Password must contain at least one special character!.")
         return value
 
-    @validator("username")
+    @field_validator("username")
     def check_username(cls, value):
         if len(value) < 8:
             raise ValueError("Username must be at least 8 characters long")
@@ -161,7 +161,7 @@ class NewPassword(BaseModel):
                                                    " character, and one Upper case letter")]
     confirm_password: Annotated[str, Field()]
 
-    @validator("new_password")
+    @field_validator("new_password")
     def check_password(cls, value):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters long!.")
@@ -190,7 +190,7 @@ class ChangePassword(BaseModel):
                                                    " and one Upper case letter")]
     confirm_password: Annotated[str, Field]
 
-    @validator("new_password")
+    @field_validator("new_password")
     def check_password(cls, value):
         if len(value) < 8:
             raise ValueError("Password must be at least 8 characters long!.")
