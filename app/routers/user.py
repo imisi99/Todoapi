@@ -225,7 +225,7 @@ class UserDetails(BaseModel):
     username: str
 
 
-# User Signup route
+# User Signup router
 @user.post("/signup", status_code=status.HTTP_201_CREATED,
            response_description={201: {"description": "User has successfully signed up"}})
 async def user_signup(userform: UserForm, db: db_dependency):
@@ -260,7 +260,7 @@ async def user_signup(userform: UserForm, db: db_dependency):
     return "User has been created successfully"
 
 
-# User login route
+# User login router
 @user.post("/login", response_model=Token, status_code=status.HTTP_202_ACCEPTED,
            response_description={202: {"description": "User has logged in successfully"}})
 async def user_login(login: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
@@ -280,7 +280,7 @@ async def user_login(login: Annotated[OAuth2PasswordRequestForm, Depends()], db:
     }
 
 
-# Get logged in user details route
+# Get logged in user details router
 @user.get("/get-user-details", status_code=status.HTTP_200_OK,
           response_description={200: {"description": "Logged in user has successfully received details"}})
 async def get_current_user_details(user: user_dependency, db: db_dependency):
@@ -303,7 +303,7 @@ async def get_current_user_details(user: user_dependency, db: db_dependency):
                         detail="Error in getting user details, please try again later")
 
 
-# User update details route
+# User update details router
 @user.put("/update-user-details", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User details have been updated successfully"}})
 async def update_user_details(user: user_dependency, form: UpdateUser, db: db_dependency):
@@ -343,7 +343,7 @@ async def update_user_details(user: user_dependency, form: UpdateUser, db: db_de
     return "User details have been Updated successfully"
 
 
-# User change password route
+# User change password router
 @user.put("/change-user-password", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User password has been changed successfully"}})
 async def change_user_password(user: user_dependency, form: NewPassword, db: db_dependency):
@@ -378,7 +378,7 @@ async def change_user_password(user: user_dependency, form: NewPassword, db: db_
     return "Password has been Changed Successfully"
 
 
-# User forgot password route
+# User forgot password router
 class response(BaseModel):
     message: Annotated[str, Field()]
 
@@ -410,7 +410,7 @@ async def user_forgot_password(db: db_dependency, form: ChangePassword):
     return "User password has been updated successfully"
 
 
-# User delete route
+# User delete router
 @user.delete("/delete-user", status_code=status.HTTP_204_NO_CONTENT,
              response_description={204: {"description": "User details alongside todos has been deleted successfully"}})
 async def delete_user(user: user_dependency, db: db_dependency):

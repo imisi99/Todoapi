@@ -63,7 +63,7 @@ class UpdateTodo(BaseModel):
         }
 
 
-# Get all tasks route
+# Get all tasks router
 @todo.get("/all-todo", status_code=status.HTTP_200_OK,
           response_description={200: {"description": "User has requested for all todo that is present"}})
 async def get_all_todo(user: user_dependency, db: db_dependency):
@@ -77,7 +77,7 @@ async def get_all_todo(user: user_dependency, db: db_dependency):
     return data
 
 
-# Get tasks by id route
+# Get tasks by id router
 @todo.get("/get-todo/{todo_id}", status_code=status.HTTP_200_OK,
           response_description={200: {"description": "User has searched for todo based on todo id"}})
 async def get_todo_by_id(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
@@ -92,7 +92,7 @@ async def get_todo_by_id(user: user_dependency, db: db_dependency, todo_id: int 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
 
 
-# Get tasks by title route
+# Get tasks by title router
 @todo.get("/get-todo/u/{todo_name}", status_code=status.HTTP_200_OK,
           response_description={200: {"description": "User has searched for todo based on todo name"}})
 async def get_todo_by_name(user: user_dependency, db: db_dependency, todo_name: str = Path(max_length=100)):
@@ -107,7 +107,7 @@ async def get_todo_by_name(user: user_dependency, db: db_dependency, todo_name: 
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
 
 
-# Get tasks by completed route
+# Get tasks by completed router
 @todo.get("/get-todo/u/1/{completed}", status_code=status.HTTP_200_OK, response_description={
     200: {"description": "User has searched for todo based on completed or not completed todo"}})
 async def get_todo_by_completed(user: user_dependency, db: db_dependency, completed: bool):
@@ -122,7 +122,7 @@ async def get_todo_by_completed(user: user_dependency, db: db_dependency, comple
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid Parameters")
 
 
-# Create tasks route
+# Create tasks router
 @todo.post("/create-todo", status_code=status.HTTP_201_CREATED,
            response_description={201: {"description": "User has successfully created a todo"}})
 async def create_todo(user: user_dependency, db: db_dependency, form: CreateTodo):
@@ -148,7 +148,7 @@ async def create_todo(user: user_dependency, db: db_dependency, form: CreateTodo
     db.refresh(data)
 
 
-# Update tasks route to be complete
+# Update tasks router to be complete
 @todo.put("/update-todo/complete-todo/{todo_id}", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User has marked todo to be completed"}})
 async def update_todo_to_be_true(user: user_dependency, db: db_dependency, complete: bool, todo_id: int = Path(gt=0)):
@@ -171,7 +171,7 @@ async def update_todo_to_be_true(user: user_dependency, db: db_dependency, compl
     db.refresh(todo_update)
 
 
-# Update tasks route to update other details
+# Update tasks router to update other details
 @todo.put("/update-todo/details/{todo_id}", status_code=status.HTTP_202_ACCEPTED,
           responses={200: {"description": "User has updated the todo details based on todo id "}})
 async def update_todo(user: user_dependency, db: db_dependency, form: UpdateTodo, todo_id: int = Path(gt=0)):
@@ -197,7 +197,7 @@ async def update_todo(user: user_dependency, db: db_dependency, form: UpdateTodo
     db.refresh(todo_data)
 
 
-# Delete tasks route
+# Delete tasks router
 @todo.delete("/delete-todo/{todo_id}", status_code=status.HTTP_204_NO_CONTENT,
              response_description={204: {"description": "User has deleted a todo based off of todo id"}})
 async def delete_single_task(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
@@ -218,7 +218,7 @@ async def delete_single_task(user: user_dependency, db: db_dependency, todo_id: 
     db.commit()
 
 
-# Delete tasks route with completed todo
+# Delete tasks router with completed todo
 @todo.delete("/delete/all/{completed_todo}", status_code=status.HTTP_204_NO_CONTENT,
              response_description={204: {"description": "User has deleted all todo that has been completed "}})
 async def delete_all_completed_tasks(user: user_dependency, db: db_dependency, completed_todo: bool = Path()):
