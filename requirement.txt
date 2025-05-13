@@ -2,7 +2,7 @@ fastapi
 pydantic
 typing
 starlette
-jose
+python-jose
 sqlalchemy
 uvicorn
 psycopg2
