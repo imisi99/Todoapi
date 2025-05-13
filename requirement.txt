@@ -4,3 +4,4 @@ typing
 starlette
 jose
 sqlalchemy
+uvicorn
