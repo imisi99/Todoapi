@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, Path
 from ..schemas.database import begin, engine
 from ..schemas.model_db import Todo
-from ..schemas import model_db as model_db
 from starlette import status
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
@@ -9,7 +8,6 @@ from .user import get_user
 from sqlalchemy.orm import Session
 
 todo = APIRouter()
-
 
 
 # Initializing the database to be able to write data to it

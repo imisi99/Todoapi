@@ -5,3 +5,4 @@ starlette
 jose
 sqlalchemy
 uvicorn
+psycopg2
