@@ -10,8 +10,6 @@ from sqlalchemy.orm import Session
 
 todo = APIRouter()
 
-# Getting the session maker from the database and creating the DB
-model_db.data.metadata.create_all(bind=engine)
 
 
 # Initializing the database to be able to write data to it
