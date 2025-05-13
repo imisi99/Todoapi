@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from typing import Annotated
 from pydantic import BaseModel, Field, EmailStr, field_validator
@@ -11,6 +12,11 @@ import re
 from datetime import timedelta, datetime
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+SCHEME = os.getenv("SCHEME")
 
 user = APIRouter()
 
@@ -30,7 +36,7 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 # User Authorization and Authentication
 
-hashed = CryptContext(schemes=["bcrypt"])
+hashed = CryptContext(schemes=[SCHEME])
 
 
 def authorization(username: str, password: str, db):
@@ -43,11 +49,9 @@ def authorization(username: str, password: str, db):
     return user
 
 
-SECRET = ('488134d4d7e4205c8960dcb67c689fceba88ef1476126a7f9d78093bbb64150fd7f2652b081826475b73a76b73829e821f72cfd3'
-          '13a363f6e1db3927caaf46ba88c0c12d66e9cb0e2104262f29bdba91359d181497790424c298c26c2f4776187b5cb8d9f6afd3bc9'
-          '75cb207af2b057c6561cea6ff686b2bdc8fb5ad0244838c')
+SECRET = SECRET_KEY
 
-Algorithm = 'HS256'
+Algorithm = ALGORITHM
 
 
 def authentication(username: str, user_id: int, timedelta):
@@ -280,7 +284,7 @@ async def user_login(login: Annotated[OAuth2PasswordRequestForm, Depends()], db:
     }
 
 
-# Get logged in user details router
+# Get logged-in user details router
 @user.get("/get-user-details", status_code=status.HTTP_200_OK,
           response_description={200: {"description": "Logged in user has successfully received details"}})
 async def get_current_user_details(user: user_dependency, db: db_dependency):
@@ -343,7 +347,7 @@ async def update_user_details(user: user_dependency, form: UpdateUser, db: db_de
     return "User details have been Updated successfully"
 
 
-# User change password router
+# User changes password router
 @user.put("/change-user-password", status_code=status.HTTP_202_ACCEPTED,
           response_description={202: {"description": "User password has been changed successfully"}})
 async def change_user_password(user: user_dependency, form: NewPassword, db: db_dependency):
