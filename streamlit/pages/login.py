@@ -33,9 +33,13 @@ def signup():
                 st.stop()
             data = requests.post("https://todoapi-qi3q.onrender.com/user/signup", json=payload)
             if data.status_code != 201:
-                if data.status_code == 422:
+                if data.status_code == 500:
+                    st.error("Something went wrong on our side.")
+                    log_in()
+                    st.stop()
+                elif data.status_code == 422:
                     message = data.json()["detail"][0]["msg"]
-                    st.error(data.json())
+                    st.error(message)
                 elif data.status_code == 226:
                     st.error(data.json()["detail"])
                 else:
@@ -61,9 +65,16 @@ def log_in():
                     st.warning(f"Please enter your {key}")
             if empty:
                 st.stop()
-            data = requests.post("https://todoapi-qi3q.onrender.com/user/login", json=data)
+            headers = {
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
+            data = requests.post("https://todoapi-qi3q.onrender.com/user/login", data=payload, headers=headers)
             if data.status_code != 202:
-                st.error(data.json())
+                if data.status_code == 500:
+                    st.error("Something went wrong on our side.")
+                    st.stop()
+                message = data.json()["detail"]
+                st.error(message)
             else:
                 st.success("Login successfully")
 
