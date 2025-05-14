@@ -87,13 +87,11 @@ user_dependency = Annotated[str, Depends(get_user)]
 
 # Creating the pydantic validation for the user signup form
 class UserForm(BaseModel):
-    firstname: Annotated[str, Field(min_length=3, max_length=50)]
-    lastname: Annotated[str, Field(min_length=3, max_length=50)]
-    username: Annotated[str, Field(min_length=3, max_length=15)]
+    firstname: Annotated[str, Field()]
+    lastname: Annotated[str, Field()]
+    username: Annotated[str, Field()]
     email: Annotated[EmailStr, Field]
-    password: Annotated[str, Field(min_length=8,
-                                   description="Password must contain at least 8 character, one special character"
-                                               ", and one Upper case letter")]
+    password: Annotated[str, Field()]
 
     @field_validator("password")
     def check_password(cls, value):
