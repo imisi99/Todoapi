@@ -1,27 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends, Path
-from ..schemas.database import begin, engine
-from ..schemas.model_db import Todo
+from fastapi import APIRouter, HTTPException, Path
 from starlette import status
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
-from .user import get_user
-from sqlalchemy.orm import Session
+from .config import db_dependency, user_dependency
+from ...database.model_db import Todo
 
 todo = APIRouter()
 
-
-# Initializing the database to be able to write data to it
-def get_db():
-    db = begin()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Authentication and Authorization
-db_dependency = Annotated[Session, Depends(get_db)]
-user_dependency = Annotated[str, Depends(get_user)]
 
 
 # Todo create class
