@@ -2,8 +2,8 @@ import logging
 from fastapi import FastAPI
 from routes.todo import todo
 from routes.user import user
-from database.database import engine, begin
-from database import model_db as model_db
+from ..database.database import engine, begin
+from ..database import model_db as model_db
 from contextlib import asynccontextmanager
 
 

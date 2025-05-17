@@ -7,4 +7,3 @@ starlette
 python-jose
 psycopg2-binary
 streamlit
-re
