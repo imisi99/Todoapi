@@ -1,9 +1,12 @@
 fastapi
 pydantic
+pydantic[email]
 typing
 SQLAlchemy
 uvicorn
 starlette
+passlib
 python-jose
+python-dotenv
 psycopg2-binary
 streamlit

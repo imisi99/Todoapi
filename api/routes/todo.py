@@ -1,47 +1,11 @@
 from fastapi import APIRouter, HTTPException, Path
 from starlette import status
-from pydantic import BaseModel, Field
-from typing import Annotated, Optional
-from .config import db_dependency, user_dependency
-from ...database.model_db import Todo
+from schema.todo_schema import CreateTodo, UpdateTodo
+from ..config import db_dependency, user_dependency
+from database.model_db import Todo
 
 todo = APIRouter()
 
-
-
-# Todo create class
-class CreateTodo(BaseModel):
-    tasks: Annotated[str, Field(max_length=100)]
-    completed: Annotated[bool, Field(Optional)]
-    note: Annotated[str, Field(max_length=100)]
-    due: Annotated[str, Field()]
-
-    class Config:
-        json_schema_extra = {
-            'example': {
-                "tasks": "task",
-                "note": "note",
-                "due": "Monday"
-            }
-        }
-
-
-# Update Todo details class
-class UpdateTodo(BaseModel):
-    tasks: Annotated[str, Field(max_length=100)]
-    completed: Annotated[bool, Field(Optional)]
-    note: Annotated[str, Field(max_length=100)]
-    due: Annotated[str, Field]
-    user_id: Annotated[int, Field(Optional)]
-
-    class Config:
-        json_schema_extra = {
-            'example': {
-                "tasks": "task",
-                "note": "note",
-                "due": 'Monday'
-            }
-        }
 
 
 # Get all tasks router
@@ -103,7 +67,7 @@ async def get_todo_by_completed(user: user_dependency, db: db_dependency, comple
     raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid Parameters")
 
 
-# Create tasks router
+
 @todo.post("/create-todo", status_code=status.HTTP_201_CREATED,
            response_description={201: {"description": "User has successfully created a todo"}})
 async def create_todo(user: user_dependency, db: db_dependency, form: CreateTodo):

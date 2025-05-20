@@ -3,17 +3,29 @@ from fastapi import Depends, HTTPException
 from starlette import status
 from typing import Annotated
 from passlib.context import CryptContext
+from dotenv import load_dotenv
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from datetime import datetime
-from ..main import get_db
-from ...database.model_db import User
+from datetime import datetime, timedelta
+from database.database import begin
+from database.model_db import User
+
+
+load_dotenv()
+
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 SCHEME = os.getenv("SCHEME")
 
+
+def get_db():
+    db = begin()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 db_dependency = Annotated[Session, Depends(get_db)]
@@ -59,9 +71,28 @@ async def get_user(token: Annotated[str, Depends(bearer)]):
         }
 
     except JWTError as e:
-        print(f"JWTError occurred: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="User timed out due to inactivity, Login to continue")
+                            detail="Timeout session expired!")
 
 
+def otp_authentication(user_id: int):
+    encode = {'id': user_id}
+    expiring = datetime.now() + timedelta(minutes=15)
+    encode.update({'exp': expiring})
+    return jwt.encode(encode, SECRET, algorithm=Algorithm)
+
+
+async def otp_token_verification(token: str):
+    try:
+        payload = jwt.decode(token, SECRET, algorithms=[Algorithm])
+        user_id: int = payload.get("id")
+        if user_id is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
+        return {"user_id": user_id}
+    except JWTError as e:
+        raise HTTPException(status_code=status.HTTP_400_UNAUTHORIZED, detail="Timeout session expired!")
+    
+
+
+otp_dependency = Annotated[str, Depends(otp_token_verification)]
 user_dependency = Annotated[str, Depends(get_user)]

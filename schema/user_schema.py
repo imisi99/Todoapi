@@ -86,19 +86,29 @@ class ForgotPassowrd(BaseModel):
 
 
 
-class OTP(BaseModel):
+class OTPGeneration(BaseModel):
     email: Annotated[EmailStr, Field]
     
 
 
+class OTPVerification(BaseModel):
+    otp: Annotated[str, Field]
+
+    
+    
 class UserDetails(BaseModel):
     firstname: str
     lastname: str
-    email: EmailStr
     username: str
+    email: EmailStr
     
     
 
+class DeleteUser(BaseModel):
+    username: str
+    
+    
+    
 class Token(BaseModel):
     access_token: str
     token_type: str

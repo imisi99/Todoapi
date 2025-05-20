@@ -33,7 +33,7 @@ def signup():
                 log_in()
                 st.stop()
             try:
-                request = requests.post("https://todoapi-qi3q.onrender.com/user/signup", json=payload)
+                request = requests.post("http://127.0.0.1:8000/user/signup", json=payload)
             except requests.exceptions.RequestException as e:
                 log_in()
                 st.error("Failed to Signup... Ensure you are connected to the internet and try again.")
@@ -77,7 +77,7 @@ def log_in():
                 "Content-Type": "application/x-www-form-urlencoded",
             }
             try:
-                request = requests.post("https://todoapi-qi3q.onrender.com/user/login", data=payload, headers=headers)
+                request = requests.post("http://127.0.0.1:8000/user/login", json=payload)
             except requests.exceptions.RequestException as e:
                 st.error("Failed to Login... Ensure you are connected to the internet and try again.")
                 st.stop()
@@ -88,7 +88,7 @@ def log_in():
                 message = request.json()["detail"]
                 st.error(message)
             else:
-                st.success("Login successfully")
+                st.write(request.json())
 
 
 signup()
