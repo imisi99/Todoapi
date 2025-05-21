@@ -34,7 +34,8 @@ class Todo(data):
     id = Column(Integer, primary_key=True, index=True)
     task = Column(String(50), nullable=False)
     note = Column(String(50), nullable=True)
-    completed = Column(Boolean, nullable=False)
+    status = Column(Boolean, nullable=False, default=False)
+    priority = Column(Integer, nullable=False, default=1)
     created_at = Column(DateTime, nullable=False, default=datetime.now())
     due = Column(DateTime, nullable=False, default=additional_time())
     user_id = Column(String, ForeignKey("User.id"))
@@ -46,6 +47,8 @@ class Otp(data):
     __tablename__ = "Otp"
     
     id = Column(Integer, primary_key=True, index=True)
-    otp = Column(Integer, nullable=False)
+    otp = Column(String(6), nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+    tag = Column(String(10), nullable=False, default="Password")
     expiring = Column(DateTime, nullable=False, default=otp_additional_time())
     user_id = Column(String, ForeignKey("User.id"))

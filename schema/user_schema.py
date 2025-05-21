@@ -103,11 +103,6 @@ class UserDetails(BaseModel):
     email: EmailStr
     
     
-
-class DeleteUser(BaseModel):
-    username: str
-    
-    
     
 class Token(BaseModel):
     access_token: str

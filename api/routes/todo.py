@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, HTTPException, Path
 from starlette import status
 from schema.todo_schema import CreateTodo, UpdateTodo
@@ -8,134 +9,108 @@ todo = APIRouter()
 
 
 
-# Get all tasks router
-@todo.get("/all-todo", status_code=status.HTTP_200_OK,
-          response_description={200: {"description": "User has requested for all todo that is present"}})
-async def get_all_todo(user: user_dependency, db: db_dependency):
+@todo.get("/get-todo/all", status_code=status.HTTP_200_OK,)
+async def get_all_task(user: user_dependency, db: db_dependency):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized User")
 
     data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).all()
-    if not data:
-        pass
 
-    return data
+    if data is not None:
+        return json.dumps(data)
 
 
-# Get tasks by id router
-@todo.get("/get-todo/{todo_id}", status_code=status.HTTP_200_OK,
-          response_description={200: {"description": "User has searched for todo based on todo id"}})
-async def get_todo_by_id(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
+
+@todo.get("/get-todo/id/{todo_id}", status_code=status.HTTP_200_OK)
+async def get_task_by_id(user: user_dependency, db: db_dependency, todo_id: int = Path(gt=0)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
     data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.id == todo_id).first()
 
-    if data is not None:
-        return data
+    if not data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+    return json.dumps(data)
 
 
-# Get tasks by title router
-@todo.get("/get-todo/u/{todo_name}", status_code=status.HTTP_200_OK,
-          response_description={200: {"description": "User has searched for todo based on todo name"}})
-async def get_todo_by_name(user: user_dependency, db: db_dependency, todo_name: str = Path(max_length=100)):
+
+@todo.get("/get-todo/name/{todo_name}", status_code=status.HTTP_200_OK)
+async def get_task_by_name(user: user_dependency, db: db_dependency, todo_name: str = Path(max_length=55)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
     data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.task == todo_name).all()
 
-    if data is not None:
-        return data
+    if not data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+    return json.dumps(data)
 
 
-# Get tasks by completed router
-@todo.get("/get-todo/u/1/{completed}", status_code=status.HTTP_200_OK, response_description={
-    200: {"description": "User has searched for todo based on completed or not completed todo"}})
-async def get_todo_by_completed(user: user_dependency, db: db_dependency, completed: bool):
+
+@todo.get("/get-todo/status/{completed}", status_code=status.HTTP_200_OK)
+async def get_task_by_status(user: user_dependency, db: db_dependency, completed: bool):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
     data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.completed == completed).all()
 
-    if data is not None:
-        return data
+    if not data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid Parameters")
+    return json.dumps(data)
 
 
 
-@todo.post("/create-todo", status_code=status.HTTP_201_CREATED,
-           response_description={201: {"description": "User has successfully created a todo"}})
-async def create_todo(user: user_dependency, db: db_dependency, form: CreateTodo):
-    todo_created = False
+@todo.post("/create-todo", status_code=status.HTTP_201_CREATED)
+async def create_task(user: user_dependency, db: db_dependency, payload: CreateTodo):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
-    data = Todo(
-        task=form.tasks,
-        completed=False,
-        note=form.note,
-        due=form.due,
+    todo = Todo(
+        task=payload.tasks,
+        note=payload.note,
         user_id=user.get("user_id")
     )
 
-    todo_created = True
-
-    if todo_created is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request, Please try again later")
-
-    db.add(data)
+    db.add(todo)
     db.commit()
-    db.refresh(data)
+    db.refresh(todo)
 
 
-# Update tasks router to be complete
-@todo.put("/update-todo/complete-todo/{todo_id}", status_code=status.HTTP_202_ACCEPTED,
-          response_description={202: {"description": "User has marked todo to be completed"}})
-async def update_todo_to_be_true(user: user_dependency, db: db_dependency, complete: bool, todo_id: int = Path(gt=0)):
-    todo_completed = False
+
+@todo.put("/update-todo/complete-todo/{todo_id}", status_code=status.HTTP_202_ACCEPTED)
+async def update_task_status(user: user_dependency, db: db_dependency, status: bool, todo_id: int = Path(gt=0)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
-    todo_update = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.id == todo_id).first()
-    if todo_update is None:
+    task = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.id == todo_id).first()
+    if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
 
-    todo_update.completed = complete
-
-    todo_completed = True
-    if todo_completed is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request, Please try again later")
+    task.completed = status
 
     db.add(todo_update)
     db.commit()
     db.refresh(todo_update)
 
 
-# Update tasks router to update other details
-@todo.put("/update-todo/details/{todo_id}", status_code=status.HTTP_202_ACCEPTED,
-          responses={200: {"description": "User has updated the todo details based on todo id "}})
-async def update_todo(user: user_dependency, db: db_dependency, form: UpdateTodo, todo_id: int = Path(gt=0)):
-    todo_updated = False
+
+@todo.put("/update-todo/details/{todo_id}", status_code=status.HTTP_202_ACCEPTED)
+async def update_todo(user: user_dependency, db: db_dependency, payload: UpdateTodo, todo_id: int = Path(gt=0)):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
-    todo_data = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.id == todo_id).first()
+    task = db.query(Todo).filter(Todo.user_id == user.get("user_id")).filter(Todo.id == todo_id).first()
 
-    if todo_data is None:
+    if task is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
 
-    todo_data.task = form.tasks
-    todo_data.note = form.note
-    todo_data.due = form.due
-
-    todo_updated = True
-    if todo_updated is not True:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request, Please try again later")
+    task.task = payload.tasks
+    task.note = payload.note
+    task.status = payload.status
+    task.due = payload.due
 
     db.add(todo_data)
     db.commit()

@@ -3,8 +3,8 @@ import json
 from fastapi import APIRouter, HTTPException
 from starlette import status
 from datetime import timedelta
-from ..config import hashed, db_dependency, authentication, authorization, user_dependency, otp_authentication, otp_token_verification, otp_dependency
-from schema.user_schema import SignupForm, LoginForm, Token, UserDetails, UpdateUser, NewPassword, ForgotPassowrd, OTPGeneration, OTPVerification, DeleteUser
+from ..config import hashed, db_dependency, authentication, authorization, user_dependency, otp_authentication, otp_token_verification, otp_dependency, otp_email, password_email, signup_email, delete_email, generate_otp
+from schema.user_schema import SignupForm, LoginForm, Token, UserDetails, UpdateUser, NewPassword, ForgotPassowrd, OTPGeneration, OTPVerification
 from database.model_db import Todo, User, Otp
 
 
@@ -39,6 +39,8 @@ async def user_signup(payload: SignupForm, db: db_dependency):
     db.commit()
     db.refresh(user)
 
+    signup_email(user.email, user.username)
+    
     return json.dumps({"message": "User Signed up sucessfully"})
 
 
@@ -47,7 +49,7 @@ async def user_signup(payload: SignupForm, db: db_dependency):
 async def user_login(payload: LoginForm, db: db_dependency):
     user = authorization(payload.username, payload.password, db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password!")
 
     token = authentication(user.role, user.id, timedelta(hours=1))
 
@@ -98,10 +100,10 @@ async def update_user_details(user: user_dependency, payload: UpdateUser, db: db
     if existing_username is not None and existing_username.username != user1.username:
         raise HTTPException(status_code=status.HTTP_226_IM_USED, detail="username is already in use")
 
-    user1.firstname = payload.firstname
-    user1.lastname = payload.lastname
-    user1.email = payload.email
-    user1.username = payload.username
+    user_details.firstname = payload.firstname
+    user_details.lastname = payload.lastname
+    user_details.email = payload.email
+    user_details.username = payload.username
 
 
     db.add(user_details)
@@ -136,7 +138,7 @@ async def change_user_password(user: user_dependency, payload: NewPassword, db: 
     db.commit()
     db.refresh(user_details)
     
-    updated_password_email(user_details.email)
+    password_email(user_details.email, user_details.username)
 
     return json.dumps({"message": "Password has been updated successfully"})
 
@@ -156,7 +158,7 @@ async def user_forgot_password(db: db_dependency, payload: OTPGeneration):
         user_id=user.id
     )
     
-    otp_generation_email(user.email, otp)
+    otp_email(user.email, user.username, otp)
 
     db.add(otp_obj)
     db.commit()
@@ -169,16 +171,27 @@ async def user_forgot_password(db: db_dependency, payload: OTPGeneration):
 @user.get("/verify-otp", status_code=status.HTTP_200_OK)
 async def verify_otp(db: db_dependency, payload: OTPVerification):
     otp = db.query(Otp).filter(Otp.otp == payload.otp).first()
+    
+    if not otp or otp.tag != "Password":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid otp!")
+    
     if otp.expiring > datetime.now():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Expired otp!")
     
-    if not otp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid otp!")
+    if otp.is_used:
+        raised HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Used otp!")
+    
     
     token = otp_authentication(otp.user_id)
     
     if not token:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="An error occured while validating otp")
+    
+    otp.is_used = True
+    
+    db.add(otp)
+    db.commit()
+    db.refresh(otp)
     
     return json.dumps({"token": token})
     
@@ -187,9 +200,12 @@ async def verify_otp(db: db_dependency, payload: OTPVerification):
 @user.put("/change-user-password", status_code=status.HTTP_202_ACCEPTED)
 async def change_user_password(db: db_dependency, otp: otp_dependency, payload: ForgotPassword):
     if not otp:
-        raise HTTPException(status_code=status.HTTP_401_AUTHORIZED, detail="Invalid session token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session token")
     
-    user = db.query(User).filter(User.id == opt.get("user_id")).first()
+    user = db.query(User).filter(User.id == otp.get("user_id")).first()
+    
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found!")
     
     hashed_password = hashed.hash(payload.new_password)
     
@@ -199,25 +215,54 @@ async def change_user_password(db: db_dependency, otp: otp_dependency, payload: 
     db.commit()
     db.refresh(user)
     
+    password_email(user.email, user.username)
+    
     return json.dumps({"message": "Password Changed Successfully"})
 
 
 
+@user.get("/delete-user-request", status_code=status.HTTP_200_OK)
+async def delete_user_request(user: user_dependency, db: db_dependency):
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
+    user_details = db.query(User).filter(User.id == user.get("user_id")).first()
+    
+    if not user_details:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch user details")
+    
+    otp = generate_otp()
+    
+    otp_obj = Otp(
+        otp=otp,
+        tag="Deletion"
+        user_id=user.id
+    )
+    
+    delete_email(user.email, user.username, otp)
+    
+    db.add(otp_obj)
+    db.commit()
+    db.refresh(otp_obj)
+    
+    
 @user.delete("/delete-user", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_user(user: user_dependency, db: db_dependency, payload: DeleteUser):
+async def delete_user(user: user_dependency, db: db_dependency, payload: OTPVerification):
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
 
-    user_details = db.query(User).filter(User.id == user.get("user_id")).first()
-    todo = db.query(Todo).filter(Todo.user_id == user.get("user_id")).delete()
+    otp = db.query(Otp).filter(Otp.user_id == user.get("user_id")).filter(Otp.otp == payload.otp).first()
+    
+    if not otp or otp.tag != "Deletion":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid otp!")
+    
+    if otp.expiring > datetime.now():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Expired otp!")
+    
+    if otp.is_used:
+        raised HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Used otp!")
+    
+    db.query(Todo).filter(Todo.user_id == user.get("user_id")).delete()
+    db.query(Otp).filter(Otp.user_id == user.get("user_id")).delete()
+    db.query(User).filter(User.id == user.get("user_id")).delete()
 
-    if not user_details:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Error while deleting user data")
-
-    if user_details.username != payload.username:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized user")
-
-    db.delete(delete)
     db.commit()
-
-    return json.dumps({"message": "User data has been deleted successfully"})
